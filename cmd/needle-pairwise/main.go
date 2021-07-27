@@ -67,13 +67,10 @@ func main() {
 		nw.Par.SetEndWeight(*endweight)
 	}
 
-	cmd := nw.Par.GetCmd(string(nw.Sqa.Sequence), string(nw.Sqb.Sequence))
-
-	out, err := cmd.CombinedOutput()
+	err := nw.Align()
 	if err != nil {
-		fmt.Println(err)
-		//panic(err)
+		panic(err)
 	}
 
-	fmt.Println(string(out))
+	fmt.Println("Similarity:", nw.Rst.GetIdentityPct())
 }
