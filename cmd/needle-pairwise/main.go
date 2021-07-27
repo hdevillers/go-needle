@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"regexp"
 
 	"github.com/hdevillers/go-needle"
@@ -27,11 +28,12 @@ func main() {
 	seqa := flag.String("seqa", "", "First sequence file.")
 	seqb := flag.String("seqb", "", "Second sequence file.")
 	format := flag.String("format", "fasta", "Sequence format.")
-	gapopen := flag.Float64("gapopen", needle.D_GAPOPEN, "Gap open penality.")
-	gapextend := flag.Float64("gapextend", needle.D_GAPEXTEND, "Gap extend penality.")
-	endopen := flag.Float64("endopen", needle.D_ENDOPEN, "End gap open penality.")
-	endextend := flag.Float64("endextend", needle.D_ENDEXTEND, "End gap extend penality.")
-	endweight := flag.Bool("endweight", needle.D_ENDWEIGHT, "Apply end gap penality.")
+	gapopen := flag.Float64("gapopen", -1.0, "Gap open penality.")
+	gapextend := flag.Float64("gapextend", -1.0, "Gap extend penality.")
+	endopen := flag.Float64("endopen", -1.0, "End gap open penality.")
+	endextend := flag.Float64("endextend", -1.0, "End gap extend penality.")
+	endweight := flag.Bool("endweight", false, "Apply end gap penality.")
+	flag.Parse()
 
 	// Check input arguments
 	if *seqa == "" {
@@ -45,4 +47,33 @@ func main() {
 	sa := loadSeq(*seqa, *format)
 	sb := loadSeq(*seqb, *format)
 
+	// Create the Needleman Wunch object
+	nw := needle.NewNeedle(sa, sb)
+
+	// Apply user parameter if required
+	if *gapopen != -1.0 {
+		nw.Par.SetGapOpen(*gapopen)
+	}
+	if *gapextend != -1.0 {
+		nw.Par.SetGapExtend(*gapextend)
+	}
+	if *endopen != -1.0 {
+		nw.Par.SetEndOpen(*endopen)
+	}
+	if *endextend != -1.0 {
+		nw.Par.SetEndExtend(*endextend)
+	}
+	if *endweight {
+		nw.Par.SetEndWeight(*endweight)
+	}
+
+	cmd := nw.Par.GetCmd(string(nw.Sqa.Sequence), string(nw.Sqb.Sequence))
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println(err)
+		//panic(err)
+	}
+
+	fmt.Println(string(out))
 }
