@@ -73,4 +73,7 @@ func main() {
 	}
 
 	fmt.Println("Similarity:", nw.Rst.GetIdentityPct())
+	fmt.Println("Aln seqa:", nw.Rst.GetAlignedSeqA())
+	fmt.Println("Aln diff:", nw.Rst.GetDiffSeq())
+	fmt.Println("Aln seqb:", nw.Rst.GetAlignedSeqB())
 }

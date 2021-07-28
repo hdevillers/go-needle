@@ -15,6 +15,9 @@ type Result struct {
 	pctsimil float64
 	pctgap   float64
 	score    float64
+	aligna   string
+	alignb   string
+	sdiff    string
 }
 
 type Reader interface {
@@ -35,6 +38,7 @@ func (r *Result) Parse(out Reader) error {
 	reSimil := regexp.MustCompile(`Similarity\:\s+(\d+)`)
 	reGap := regexp.MustCompile(`Gaps\:\s+(\d+)`)
 	reScore := regexp.MustCompile(`Score\:\s+([\d+\.]+)`)
+	reAlign := regexp.MustCompile(`\d\s([\w\-]+)\s`)
 
 	// Skip first lines and read the length
 	for err == nil {
@@ -98,8 +102,42 @@ func (r *Result) Parse(out Reader) error {
 	for line[0] == '#' {
 		line, err = out.ReadString('\n')
 		if err != nil {
-			return errors.New("[Needle parser]: ...")
+			return errors.New("[Needle parser]: Failed to find the aligned sequences. Please check output format.")
 		}
+	}
+
+	// Read the first line of the alignment
+	line, err = out.ReadString('\n')
+	if err != nil {
+		return errors.New("[Needle parser]: Failed to find the aligned sequences. Please check output format.")
+	}
+	for len(line) > 1 {
+		str := reAlign.FindStringSubmatch(line)
+		ind := reAlign.FindStringSubmatchIndex(line)
+		r.aligna += str[1]
+
+		// Sequence compare line
+		line, err = out.ReadString('\n')
+		if err != nil {
+			return errors.New("[Needle parser]: Failed to find the aligned sequences. Please check output format.")
+		}
+		if len(line) < ind[3] {
+			return errors.New("[Needle parser]: Bad alignment format.")
+		}
+		r.sdiff += line[ind[2]:ind[3]]
+
+		// Sequence compare line
+		line, err = out.ReadString('\n')
+		if err != nil {
+			return errors.New("[Needle parser]: Failed to find the aligned sequences. Please check output format.")
+		}
+		if len(line) < ind[3] {
+			return errors.New("[Needle parser]: Bad alignment format.")
+		}
+		r.alignb += line[ind[2]:ind[3]]
+
+		line, err = out.ReadString('\n')
+		line, err = out.ReadString('\n')
 	}
 
 	return nil
@@ -129,4 +167,13 @@ func (r *Result) GetScore() float64 {
 }
 func (r *Result) GetLength() int {
 	return r.length
+}
+func (r *Result) GetAlignedSeqA() string {
+	return r.aligna
+}
+func (r *Result) GetAlignedSeqB() string {
+	return r.alignb
+}
+func (r *Result) GetDiffSeq() string {
+	return r.sdiff
 }
