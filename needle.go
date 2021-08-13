@@ -22,6 +22,10 @@ func NewNeedle(sa seq.Seq, sb seq.Seq) *Needle {
 	return &nw
 }
 
+func (nw *Needle) SetParam(p *Param) {
+	nw.Par = p
+}
+
 func (nw *Needle) Align() error {
 	// Get the command line to execute
 	cmd := nw.Par.GetCmd(
