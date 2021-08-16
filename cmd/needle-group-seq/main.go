@@ -29,26 +29,79 @@ func loadSeq(i, f string, a *[]seq.Seq) int {
 	return nseq
 }
 
-func runSearchThread(queryChan chan int, querySeq *[]seq.Seq, refSeq *[]seq.Seq, p *needle.Param, kept *[]int) {
+type Search struct {
+	RefSeq   []seq.Seq
+	QuerySeq []seq.Seq
+	NRef     int
+	NQuery   int
+	Param    needle.Param
+	Kept     []bool
+	MinSim   float64
+}
+
+func newSearch(r, q, f string) *Search {
+	var s Search
+	s.NRef = loadSeq(r, f, &s.RefSeq)
+	s.NQuery = loadSeq(q, f, &s.QuerySeq)
+	fmt.Printf("Read %d sequences in reference sequence file (%s).\n", s.NRef, r)
+	fmt.Printf("Read %d sequences in reference sequence file (%s).\n", s.NQuery, q)
+	s.Kept = make([]bool, s.NQuery)
+
+	return (&s)
+}
+
+func (s *Search) runSearchThread(queryChan chan int, threadChan chan int) {
 	for iquery := range queryChan {
-		query := (*querySeq)[iquery]
-		for _, seq := range *refSeq {
+		query := s.QuerySeq[iquery]
+	rtest:
+		for _, seq := range s.RefSeq {
 			nw := needle.NewNeedle(query, seq)
-			nw.SetParam(p)
+			nw.SetParam(&s.Param)
 
 			err := nw.Align()
 			if err != nil {
 				panic(err)
 			}
 
+			if nw.Rst.GetSimilarityPct() >= s.MinSim {
+				s.Kept[iquery] = true
+				break rtest
+			}
+
 		}
 	}
+	// End of thread process
+	threadChan <- 1
+}
+
+func (s *Search) save(o string) {
+	wkept := seqio.NewWriter(o+"_kept.fasta", "fasta")
+	wkept.CheckPanic()
+	defer wkept.Close()
+	wdisc := seqio.NewWriter(o+"_discarded.fasta", "fasta")
+	wdisc.CheckPanic()
+	defer wdisc.Close()
+
+	nkept := 0
+	ndisc := 0
+	for i := range s.Kept {
+		if (*&s.Kept)[i] {
+			nkept++
+			wkept.Write(s.QuerySeq[i])
+		} else {
+			ndisc++
+			wdisc.Write(s.QuerySeq[i])
+		}
+	}
+
+	fmt.Printf("Kept %d sequences from the query sequences (%d discarded).\n", nkept, ndisc)
 }
 
 func main() {
 	refInput := flag.String("ref", "", "Input reference sequence file.")
 	queryInput := flag.String("query", "", "Input query sequence file.")
-	minSimil := flag.Float64("min-sim", 80.0, "Minimal similarity threshold.")
+	output := flag.String("output", "SeqSearch", "Output file name base.")
+	minSim := flag.Float64("min-sim", 80.0, "Minimal similarity threshold.")
 	format := flag.String("format", "fasta", "Sequence file format.")
 	gapopen := flag.Float64("gapopen", -1.0, "Gap open penality.")
 	gapextend := flag.Float64("gapextend", -1.0, "Gap extend penality.")
@@ -66,33 +119,47 @@ func main() {
 		panic("You must provide a query sequence file.")
 	}
 
-	// Prepare needle parameter setting
-	param := needle.NewParam()
+	// Init. a new search object
+	src := newSearch(*refInput, *queryInput, *format)
+	src.MinSim = *minSim
+
+	// Reset parameter if needed
 	if *gapopen != -1.0 {
-		param.SetGapOpen(*gapopen)
+		src.Param.SetGapOpen(*gapopen)
 	}
 	if *gapextend != -1.0 {
-		param.SetGapExtend(*gapextend)
+		src.Param.SetGapExtend(*gapextend)
 	}
 	if *endopen != -1.0 {
-		param.SetEndOpen(*endopen)
+		src.Param.SetEndOpen(*endopen)
 	}
 	if *endextend != -1.0 {
-		param.SetGapExtend(*endextend)
+		src.Param.SetGapExtend(*endextend)
 	}
 	if *endweight {
-		param.SetEndWeight(true)
+		src.Param.SetEndWeight(true)
 	}
-
-	// Load sequences
-	var refSeq []seq.Seq
-	nref := loadSeq(*refInput, *format, &refSeq)
-	fmt.Printf("Read %d sequences in reference sequence file (%s).", nref, *refInput)
-	var querySeq []seq.Seq
-	nquery := loadSeq(*queryInput, *format, &querySeq)
-	fmt.Printf("Read %d sequences in reference sequence file (%s).", nquery, *queryInput)
 
 	// Prepare chanels
 	queryChan := make(chan int)
+	threadChan := make(chan int)
 
+	// Launch parallel threaded routines
+	for i := 0; i < *threads; i++ {
+		go src.runSearchThread(queryChan, threadChan)
+	}
+
+	// Feed the query channel
+	for i := 0; i < src.NQuery; i++ {
+		queryChan <- i
+	}
+	close(queryChan)
+
+	// Wait threads
+	for i := 0; i < *threads; i++ {
+		<-threadChan
+	}
+
+	// Write out selected sequences
+	src.save(*output)
 }

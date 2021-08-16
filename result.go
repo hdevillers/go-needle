@@ -91,9 +91,9 @@ func (r *Result) Parse(out Reader) error {
 
 	// Compute ratio
 	if r.length > 0 {
-		r.pctident = float64(r.nident) / float64(r.length)
-		r.pctsimil = float64(r.nsimil) / float64(r.length)
-		r.pctgap = float64(r.ngap) / float64(r.length)
+		r.pctident = float64(r.nident) / float64(r.length) * 100.0
+		r.pctsimil = float64(r.nsimil) / float64(r.length) * 100.0
+		r.pctgap = float64(r.ngap) / float64(r.length) * 100.0
 	} else {
 		return errors.New("[Needle parser]: Alignment length is null.")
 	}
