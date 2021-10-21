@@ -58,6 +58,9 @@ func newAllAll(i, f string) *AllAll {
 	// Compute the number of combinations
 	aa.Ncombs = (aa.Nseqs * (aa.Nseqs - 1)) / 2
 
+	// Init. a new parameter setting
+	aa.Param = *needle.NewParam()
+
 	// Init. Combs and Results arrays
 	aa.Combs = make([][]int, aa.Ncombs)
 	aa.Restuls = make([][]float64, aa.Ncombs)

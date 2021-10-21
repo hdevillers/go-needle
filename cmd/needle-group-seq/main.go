@@ -43,6 +43,7 @@ func newSearch(r, q, f string) *Search {
 	var s Search
 	s.NRef = loadSeq(r, f, &s.RefSeq)
 	s.NQuery = loadSeq(q, f, &s.QuerySeq)
+	s.Param = *needle.NewParam()
 	fmt.Printf("Read %d sequences in reference sequence file (%s).\n", s.NRef, r)
 	fmt.Printf("Read %d sequences in reference sequence file (%s).\n", s.NQuery, q)
 	s.Kept = make([]bool, s.NQuery)

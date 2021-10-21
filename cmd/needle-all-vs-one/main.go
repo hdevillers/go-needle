@@ -60,6 +60,9 @@ func newAllOne(q, r, f string) *AllOne {
 		panic("Failed to read reference sequence.")
 	}
 
+	// Init a new parameter setting
+	ao.Param = *needle.NewParam()
+
 	ao.Simil = make([]float64, ao.Nseqs)
 	ao.Ident = make([]float64, ao.Nseqs)
 
