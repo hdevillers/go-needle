@@ -72,8 +72,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("Similarity:", nw.Rst.GetIdentityPct())
-	fmt.Println("Aln seqa:", nw.Rst.GetAlignedSeqA())
-	fmt.Println("Aln diff:", nw.Rst.GetDiffSeq())
-	fmt.Println("Aln seqb:", nw.Rst.GetAlignedSeqB())
+	fmt.Println("Identity:\t", nw.Rst.GetIdentityPct())
+	fmt.Println("Similarity:\t", nw.Rst.GetSimilarityPct())
+	fmt.Println("Number of gap:\t", nw.Rst.GetGapCount())
 }
