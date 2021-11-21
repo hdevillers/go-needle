@@ -38,7 +38,7 @@ func (r *Result) Parse(out Reader) error {
 	reSimil := regexp.MustCompile(`Similarity\:\s+(\d+)`)
 	reGap := regexp.MustCompile(`Gaps\:\s+(\d+)`)
 	reScore := regexp.MustCompile(`Score\:\s+([\d+\.]+)`)
-	reAlign := regexp.MustCompile(`\d\s([\w\-]+)\s`)
+	reAlign := regexp.MustCompile(`\d\s([\w\-\*]+)\s`)
 
 	// Skip first lines and read the length
 	for err == nil {
